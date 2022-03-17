@@ -1,1 +1,1 @@
-# ws websocket basic chat application
+# Websocket Basic Chat Application
