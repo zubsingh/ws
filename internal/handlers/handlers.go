@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"sort"
 )
 
 // only accept WsPayload type data
@@ -40,9 +41,10 @@ type WebSocketConnection struct {
 
 //	WsJsonResponse defines the response send back from websocket
 type WsJsonResponse struct {
-	Action      string `json:"action"`
-	Message     string `json:"message"`
-	MessageType string `json:"messageType"`
+	Action         string   `json:"action"`
+	Message        string   `json:"message"`
+	MessageType    string   `json:"messageType"`
+	ConnectedUsers []string `json:"connected_users"`
 }
 
 type WsPayload struct {
@@ -101,11 +103,32 @@ func ListenForWs(conn *WebSocketConnection) {
 func ListenTothisWsChannel() {
 	var response WsJsonResponse
 
-	e := <-wsChan
+	for {
+		e := <-wsChan
 
-	response.Action = "Got here"
-	response.Message = fmt.Sprintf("Some message, and action was %s", e.Action)
-	boardCastToAll(response)
+		switch e.Action {
+		case "username":
+			clients[e.Conn] = e.Username
+			users := getUserList()
+			response.Action = "list_users"
+			response.ConnectedUsers = users
+			boardCastToAll(response)
+		case "left":
+			response.Action = "list_users"
+			delete(clients, e.Conn)
+			users := getUserList()
+			response.ConnectedUsers = users
+			boardCastToAll(response)
+		case "broadcast":
+			response.Action = "broadcast"
+			response.Message = fmt.Sprintf("<strong>%s</strong>: %s", e.Username, e.Message)
+			boardCastToAll(response)
+		}
+
+		//response.Action = "Got here"
+		//response.Message = fmt.Sprintf("Some message, and action was %s", e.Action)
+		//boardCastToAll(response)
+	}
 }
 
 func boardCastToAll(response WsJsonResponse) {
@@ -117,6 +140,17 @@ func boardCastToAll(response WsJsonResponse) {
 			delete(clients, client)
 		}
 	}
+}
+
+func getUserList() []string {
+	var userList []string
+	for _, x := range clients {
+		if x != "" {
+			userList = append(userList, x)
+		}
+	}
+	sort.Strings(userList)
+	return userList
 }
 
 func renderPage(rw http.ResponseWriter, tmpl string, data jet.VarMap) error {
