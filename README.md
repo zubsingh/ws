@@ -6,3 +6,6 @@ https://github.com/CloudyKit/jet/v6
 Socket Library used:-
 1) https://github.com/joewalnes/reconnecting-websocket
 2) Gorilla Websocket
+
+To run:-
+go run cmd/web/*.go
